@@ -12,16 +12,16 @@ const dbx = idb.open('weltster_db', 1, upgradeDb => {
 
 const getFavoriteTeam = () => {
     return dbx.then(db => {
-        var tx = db.transaction('teams', 'readonly');
-        var store = tx.objectStore('teams');
+        const tx = db.transaction('teams', 'readonly');
+        const store = tx.objectStore('teams');
         return store.getAll();
     });
 }
 
 const addFavoriteTeam = (team) => {
     dbx.then(db => {
-        var tx = db.transaction('teams', 'readwrite');
-        var store = tx.objectStore('teams')
+        const tx = db.transaction('teams', 'readwrite');
+        const store = tx.objectStore('teams')
         team.createdAt = new Date().getTime()
         store.put(team);
         return tx.complete;
@@ -34,8 +34,8 @@ const addFavoriteTeam = (team) => {
   
 const delFavoriteTeam = (teamId) => {
     dbx.then(db => {
-        var tx = db.transaction('teams', 'readwrite');
-        var store = tx.objectStore('teams');
+        const tx = db.transaction('teams', 'readwrite');
+        const store = tx.objectStore('teams');
         store.delete(teamId);
         return tx.complete;
     }).then(() => {
@@ -46,9 +46,17 @@ const delFavoriteTeam = (teamId) => {
     });
 }
 
+const getTeamByKey = (key) => {
+    return dbx.then(db => {
+        const tx = db.transaction('teams', 'readonly');
+        const store = tx.objectStore('teams');
+        return store.count(key);
+    });
+}
 module.exports = {
     getFavoriteTeam,
     addFavoriteTeam,
-    delFavoriteTeam
+    delFavoriteTeam,
+    getTeamByKey
 }
   

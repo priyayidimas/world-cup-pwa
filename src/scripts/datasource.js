@@ -1,5 +1,6 @@
 const api = require("./api");
 const db = require("./db");
+let favId = [];
 
 const showPreLoader = () => {
     document.getElementById("loading").classList.remove("hide");
@@ -83,6 +84,14 @@ const showMatches = () => {
     showPreLoader();
     api.getMatches().then(data => {
         let html = '';
+        const header = `
+            <tr>
+                <th>Home Team</th>
+                <th>Away Team</th>
+                <th>Result</th>
+                <th>Winner</th>
+            </tr>
+        `;
         data.matches.forEach(match => {
             let winner = match.score.winner;
             if(winner === "HOME_TEAM"){
@@ -99,28 +108,112 @@ const showMatches = () => {
                 </tr>
             `
         });
-        document.getElementById("matches").innerHTML = html;
+        document.getElementById("matches-head").innerHTML = header;
+        document.getElementById("matches-body").innerHTML = html;
         hidePreLoader();
     })
 }
+
 const showTeams = () => {
+
     showPreLoader();
-    api.getTeams().then(data => {
-        const str = JSON.stringify(data).replace(/http:/g, 'https:');
-        jsonData = JSON.parse(str);
-        
-        data = jsonData;
-        let html = '';
-        let teams = data.teams;
-        html += '<div class="row">';
-        
+    db.getFavoriteTeam().then(teams => {
+        favId = [];
         teams.forEach(team => {
+            favId.push(team.id);
+        })
+        api.getTeams().then(data => {
+            const str = JSON.stringify(data).replace(/http:/g, 'https:');
+            jsonData = JSON.parse(str);
+            
+            data = jsonData;
+            let html = '';
+            let teams = data.teams;
+            let icon = '';
+            html += '<div class="row">';
+            
+            teams.forEach(async team => {
+                if(favId.includes(team.id)){
+                    icon = `<i class="material-icons">delete</i>`;
+                }else{
+                    icon = `<i class="material-icons">star</i>`;
+                }
+                html += `
+                <div class="col s12 m6 l6">
+                <div class="card custom">
+                    <div class="card-image">
+                        <img src="${team.crestUrl || 'assets/images/placeholder.jpeg'}" alt="${team.name}" />
+                        <a class="btn-floating halfway-fab waves-effect waves-light red btn-add">${icon}</a>
+                    </div>
+                    <div class="card-content">
+                        <span class="card-title activator">${team.name}</span>
+                    </div>
+                    <div class="card-reveal">
+                        <span class="card-title grey-text text-darken-4">${team.name}<i class="material-icons right">close</i></span>
+                        <p>Address:</p>
+                        <p>${team.address}</p>
+                        <p>Email:</p>
+                        <p>${team.email}</p>
+                        <p>Phone:</p>
+                        <p>${team.phone}</p>
+                    </div>
+                    <div class="card-action">
+                        <a href="${team.website}" target="_blank">Go to website</a>
+                    </div>
+                </div>
+                </div>
+            `
+            });
+            html += "</div>";
+            document.getElementById("teams").innerHTML = html;
+    
+            let btn = document.getElementById("teams").getElementsByClassName("btn-add");
+            for(let i = 0; i < btn.length; i++) {
+                btn[i].onclick = () => {
+                    db.getTeamByKey(teams[i].id).then((count) => {
+                        if(count == 0){                        
+                            let team = {
+                                id: teams[i].id,
+                                name: teams[i].name,
+                                website: teams[i].website,
+                                crestUrl: teams[i].crestUrl,
+                                email: teams[i].email,
+                                address: teams[i].address,
+                                phone: teams[i].phone,
+                            }
+                            db.addFavoriteTeam(team);
+                            btn[i].innerHTML = `<i class="material-icons">delete</i>`;
+                            favId.push(teams[i].id);
+                        }else{
+                            db.delFavoriteTeam(teams[i].id);
+                            btn[i].innerHTML = `<i class="material-icons">star</i>`;
+                            favId = favId.filter(e => e !== teams[i].id);
+                        }
+                    });
+                }
+            }
+            hidePreLoader();
+        });
+    });
+}
+
+const showFavTeams = () => {
+    showPreLoader();
+    const data = db.getFavoriteTeam();
+  
+    data.then(teams => {
+      let html = '';
+      html += '<div class="row">';
+      if(teams.length == 0){
+        html += '<h5 class="center-align">No favorite team found!</h5>';
+      }else{
+          teams.forEach(team => {
             html += `
             <div class="col s12 m6 l6">
-            <div class="card">
+            <div class="card custom">
                 <div class="card-image">
                     <img src="${team.crestUrl || 'assets/images/placeholder.jpeg'}" alt="${team.name}" />
-                    <a class="btn-floating halfway-fab waves-effect waves-light red btn-add" onclick="addFavorite(${team.id})"><i class="material-icons">star</i></a>
+                    <a class="btn-floating halfway-fab waves-effect waves-light red btn-del"><i class="material-icons">delete</i></a>
                 </div>
                 <div class="card-content">
                     <span class="card-title activator">${team.name}</span>
@@ -139,67 +232,9 @@ const showTeams = () => {
                 </div>
             </div>
             </div>
-        `
-        });
-        html += "</div>";
-        document.getElementById("teams").innerHTML = html;
-
-        let btn = document.getElementById("teams").getElementsByClassName("btn-add");
-        for(let i = 0; i < btn.length; i++) {
-          btn[i].onclick = () => {
-            let team = {
-                id: teams[i].id,
-                name: teams[i].name,
-                website: teams[i].website,
-                crestUrl: teams[i].crestUrl,
-                email: teams[i].email,
-                address: teams[i].address,
-                phone: teams[i].phone,
-            }
-            db.addFavoriteTeam(team);
-          }
-        }
-        
-        hidePreLoader();
-    });
-}
-
-const showFavTeams = () => {
-    showPreLoader()
-    var data = db.getFavoriteTeam();
-  
-    data.then(teams => {
-      var html = ''
-      html += '<div class="row">'
-      teams.forEach(team => {
-        html += `
-        <div class="col s12 m6 l6">
-        <div class="card">
-            <div class="card-image">
-                <img src="${team.crestUrl || 'assets/images/placeholder.jpeg'}" alt="${team.name}" />
-                <a class="btn-floating halfway-fab waves-effect waves-light red btn-del"><i class="material-icons">delete</i></a>
-            </div>
-            <div class="card-content">
-                <span class="card-title activator">${team.name}</span>
-            </div>
-            <div class="card-reveal">
-                <span class="card-title grey-text text-darken-4">${team.name}<i class="material-icons right">close</i></span>
-                <p>Address:</p>
-                <p>${team.address}</p>
-                <p>Email:</p>
-                <p>${team.email}</p>
-                <p>Phone:</p>
-                <p>${team.phone}</p>
-            </div>
-            <div class="card-action">
-                <a href="${team.website}" target="_blank">Go to website</a>
-            </div>
-        </div>
-        </div>
-      `
-      })
-  
-      if(data.length == 0) html += '<h6 class="center-align">No favorite team found!</6>'
+          `
+          });
+      }
   
       html += "</div>"
       document.getElementById("favteams").innerHTML = html;
@@ -209,6 +244,7 @@ const showFavTeams = () => {
         btn[i].onclick = () => {
           db.delFavoriteTeam(teams[i].id);
           showFavTeams();
+          favId = favId.filter(e => e !== teams[i].id);
         }
       }
       hidePreLoader()

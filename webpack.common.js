@@ -1,6 +1,7 @@
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const FaviconsWebpackPlugin = require('favicons-webpack-plugin');
+const WorkboxWebpackPlugin = require('workbox-webpack-plugin');
 
 module.exports = {
     entry: "./src/index.js",
@@ -39,6 +40,10 @@ module.exports = {
             template: "./src/index.html",
             filename: "index.html"
         }),
-        new FaviconsWebpackPlugin('./assets/images/icons/cup.png')
+        new FaviconsWebpackPlugin('./assets/images/icons/cup.png'),
+        new WorkboxWebpackPlugin.InjectManifest({
+            swSrc: "./src/service-worker.js",
+            swDest: "service-worker.js"
+        })
     ]
 };
